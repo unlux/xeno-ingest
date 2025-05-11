@@ -1,0 +1,54 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String   @unique
+  phone     String
+  address   Address?
+  createdAt DateTime @default(now())
+  Order     Order[]
+}
+
+model Address {
+  userId  String @id @db.Uuid
+  street  String
+  city    String
+  state   String
+  zipCode String
+  country String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id          String   @id @default(uuid()) @db.Uuid
+  customerId  String   @db.Uuid
+  customer    User     @relation(fields: [customerId], references: [id])
+  items       Item[]
+  totalAmount Int
+  currency    String
+  status      String
+  createdAt   DateTime @default(now())
+
+  @@index([customerId])
+}
+
+model Item {
+  id        String @id @default(uuid()) @db.Uuid
+  orderId   String @db.Uuid
+  order     Order  @relation(fields: [orderId], references: [id])
+  productId String
+  name      String
+  price     Int
+  quantity  Int
+  total     Int
+}
