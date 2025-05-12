@@ -14,3 +14,7 @@ export const customerQueue = new Queue("customer", {
 export const orderQueue = new Queue("order", {
   connection: redisConnection,
 });
+
+export const campaignQueue = new Queue("campaign", {
+  connection: redisConnection,
+});

@@ -6,8 +6,7 @@ import {
   calculateUserAggregates,
   evaluateUserAgainstRuleGroups,
 } from "../../lib/segmentation-logic"; // Import segmentation logic helpers
-
-// import { campaignQueue } from '../../utils/queue'; // We will uncomment this later
+import { campaignQueue } from "../../utils/queue"; // Import campaignQueue
 
 const prisma = new PrismaClient();
 
@@ -74,10 +73,12 @@ export async function POST(request: NextRequest) {
 
     // For now, assume all PROCESSING campaigns are to be queued
     if (newCampaign.status === CampaignStatus.PROCESSING) {
+      await campaignQueue.add("process-campaign", {
+        campaignId: newCampaign.id,
+      });
       console.log(
-        `Campaign ${newCampaign.id} is ${newCampaign.status}. Add to BullMQ here.`
+        `Campaign ${newCampaign.id} added to process-campaign queue.`
       );
-      // await campaignQueue.add('process-campaign', { campaignId: newCampaign.id });
     }
 
     return NextResponse.json(

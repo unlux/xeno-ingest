@@ -107,28 +107,24 @@
 - [ ] **API Documentation:**
   - [ ] Document request/response payloads for all core API endpoints (User, Order, Segment, Campaign).
 
-## Phase 3: Authentication & AI Integration
+## Phase 3: Communication Delivery & Logging
 
-- [ ] **Authentication (Google OAuth 2.0 with NextAuth.js or similar):**
-  - [ ] Setup NextAuth.js.
-  - [ ] Implement Google Provider.
-  - [ ] Protect relevant API routes (e.g., segment creation, campaign creation, viewing history) - only logged-in users.
-  - [ ] Store user session.
-- [ ] **AI Integration (Choose at least one):**
-  - [ ] **Option 1: Natural Language to Segment Rules**
-    - [ ] UI for text input.
-    - [ ] Backend API to take text, call LLM (e.g., OpenAI, Vertex AI).
-    - [ ] LLM prompt engineering to convert text to structured rule JSON.
-    - [ ] Present suggested rules to user for confirmation.
-  - [ ] **Option 2: AI-Driven Message Suggestions**
-    - [ ] UI element in campaign creation.
-    - [ ] Backend API takes campaign objective/audience summary.
-    - [ ] Call LLM to generate 2-3 message variants.
-  - [ ] **Option 3: Campaign Performance Summarization**
-    - [ ] On campaign details page/dashboard.
-    - [ ] Backend logic gathers stats.
-    - [ ] Call LLM with stats to generate human-readable summary.
-  - [ ] Document AI tool used, API keys (use .env), and rationale.
+- [x] **Background Worker Setup (BullMQ):**
+  - [x] Initialize BullMQ queue (`app/utils/queue.ts`) - `campaignQueue` added.
+  - [x] Integrate queue addition into campaign creation (`app/api/campaigns/route.ts`) - Job added to `campaignQueue`.
+  - [x] Create a worker (`app/utils/worker.ts`) to process campaigns from the queue.
+- [ ] **Campaign Processing Logic (in worker):**
+  - [ ] Fetch campaign details (including segment audience).
+  - [ ] For each user in the audience:
+    - [ ] Personalize message (e.g., replace `{{name}}`).
+    - [ ] Create `CommunicationLog` with `status = PENDING`.
+    - [ ] Simulate sending message (e.g., log to console, or integrate with a mock/real provider).
+    - [ ] Update `CommunicationLog` status (`SENT` or `FAILED`).
+    - [ ] Increment `sentCount` or `failedCount` on `Campaign`.
+  - [ ] Update `Campaign` status to `COMPLETED` once all users are processed.
+- [ ] **Communication Log API Endpoints:**
+  - [ ] `GET /api/campaigns/:campaignId/logs`: List logs for a campaign.
+  - [ ] `GET /api/users/:userId/logs`: List logs for a user.
 
 ## Phase 4: Dashboard & Finalization
 

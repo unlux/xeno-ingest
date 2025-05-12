@@ -153,6 +153,108 @@ const orderWorker = new Worker(
   }
 );
 
+// Campaign worker for processing campaigns
+const BATCH_SIZE = 50;
+const campaignWorker = new Worker(
+  "campaign",
+  async (job: Job<{ campaignId: string }>) => {
+    if (job.name !== "process-campaign") {
+      console.log(`Campaign Worker: Skipping unrelated job: ${job.name}`);
+      return;
+    }
+    try {
+      const { campaignId } = job.data;
+      if (!campaignId) {
+        console.warn("Campaign Worker: Received job without campaignId.");
+        return;
+      }
+      console.log(`Campaign Worker: Processing campaignId: ${campaignId}`);
+
+      // Fetch campaign and segment (with audienceUserIds)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: campaignId },
+        include: { segment: true },
+      });
+      if (!campaign || !campaign.segment) {
+        console.warn("Campaign Worker: Campaign or segment not found.");
+        return;
+      }
+      const userIds: string[] = campaign.segment.audienceUserIds || [];
+      if (userIds.length === 0) {
+        console.warn("Campaign Worker: No users in segment audience.");
+        await prisma.campaign.update({
+          where: { id: campaignId },
+          data: { status: "COMPLETED" },
+        });
+        return;
+      }
+
+      let sentCount = 0;
+      let failedCount = 0;
+      for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+        const batchIds = userIds.slice(i, i + BATCH_SIZE);
+        // Fetch user details for personalization
+        const users = await prisma.user.findMany({
+          where: { id: { in: batchIds } },
+          select: { id: true, name: true, email: true },
+        });
+        // Create CommunicationLogs with status Processing
+        const logs = await prisma.communicationLog.createMany({
+          data: users.map((user) => ({
+            campaignId: campaign.id,
+            customerId: user.id,
+            status: "PENDING",
+            personalizedMessage: campaign.messageTemplate.replace(
+              /{{name}}/g,
+              user.name || "Customer"
+            ),
+          })),
+        });
+
+        // Simulate sending for each user
+        for (const user of users) {
+          // Simulate vendor API: 90% SENT, 10% FAILED
+          const isSent = Math.random() < 0.9;
+          const status = isSent ? "SENT" : "FAILED";
+          if (isSent) sentCount++;
+          else failedCount++;
+          await prisma.communicationLog.updateMany({
+            where: {
+              campaignId: campaign.id,
+              customerId: user.id,
+            },
+            data: {
+              status,
+              sentAt: new Date(),
+              vendorMessageId: `msg_${campaign.id}_${user.id}`,
+              deliveryReceiptStatus: status,
+            },
+          });
+        }
+      }
+      // Update campaign stats and mark as COMPLETED
+      await prisma.campaign.update({
+        where: { id: campaign.id },
+        data: {
+          sentCount,
+          failedCount,
+          status: "COMPLETED",
+        },
+      });
+      console.log(
+        `Campaign Worker: Campaign ${campaignId} completed. Sent: ${sentCount}, Failed: ${failedCount}`
+      );
+    } catch (err) {
+      console.error("Campaign Worker: Error processing job", err);
+      throw err;
+    }
+  },
+  {
+    connection: redisConnection,
+    concurrency: 1, // Process one campaign at a time
+  }
+);
+
 // Event handlers for customer worker
 customerWorker.on("failed", (job, err) => {
   console.error(`Customer Worker: Job failed [id=${job.id}]`, err);
@@ -171,10 +273,20 @@ orderWorker.on("completed", (job) => {
   console.log(`Order Worker: Job completed [id=${job.id}]`);
 });
 
+// Event handlers for campaign worker
+campaignWorker.on("failed", (job, err) => {
+  console.error(`Campaign Worker: Job failed [id=${job?.id}]`, err);
+});
+
+campaignWorker.on("completed", (job) => {
+  console.log(`Campaign Worker: Job completed [id=${job.id}]`);
+});
+
 // Keep the process running
 process.on("SIGTERM", async () => {
   await customerWorker.close();
   await orderWorker.close();
+  await campaignWorker.close(); // Add campaign worker to graceful shutdown
 });
 
 console.log("Worker processes started with rate limit: 1 job every 5 seconds");
