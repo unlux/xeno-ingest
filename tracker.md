@@ -56,7 +56,7 @@
   - [x] Added `communicationLogs CommunicationLog[]` to `User` model.
   - [x] Ran `npx prisma migrate dev` successfully.
   - [x] Ran `npx prisma generate` successfully.
-- [ ] **Audience Segmentation & Preview:**
+- [x] **Audience Segmentation & Preview:**
   - [x] API Endpoint: `POST /api/segments/preview`
     - [x] Define Zod schema for rule structure (`segmentRulesSchema`, `conditionGroupSchema`, `conditionSchema`).
     - [x] Input: `rules` (JSON object representing segment logic).
@@ -69,19 +69,21 @@
       - [x] Implement helper `evaluateUserAgainstRuleGroups(user, aggregates, rules)` for OR/AND logic.
       - [x] Iterate through users, apply rules, count matches, collect sample IDs.
     - [x] Output: `{ "audienceSize": number, "sampleUserIds": ["id1", "id2", ...] }`.
-  - [ ] API Endpoint: `POST /api/segments` (to create and save a segment for a campaign)
-    - [ ] Define Zod schema for input (`name`, `rules`).
-    - Input: `name` (String), `rules` (JSON).
-    - Validation: Zod schema for input.
-    - Logic:
-      - Parse `rules`.
-      - Reuse segmentation logic from preview (`calculateUserAggregates`, `evaluateCondition`, `evaluateUserAgainstRuleGroups`) to get `audienceUserIds` and `audienceSize`.
-      - Store `Segment` in DB with `name`, `rules` (as JSON), and `audienceUserIds` (array of strings).
-    - Output: Saved segment object.
-  - [ ] API Endpoint: `GET /api/segments` (list all segments)
-    - Output: Array of segment objects.
-  - [ ] API Endpoint: `GET /api/segments/:id` (get specific segment details)
-    - Output: Single segment object.
+  - [x] API Endpoint: `POST /api/segments` (to create and save a segment for a campaign)
+    - [x] Define Zod schema for input (`name`, `rules`).
+    - [x] Input: `name` (String), `rules` (JSON).
+    - [x] Validation: Zod schema for input.
+    - [x] Logic:
+      - [x] Parse `rules`.
+      - [x] Reuse segmentation logic from preview (`calculateUserAggregates`, `evaluateCondition`, `evaluateUserAgainstRuleGroups`) to get `audienceUserIds`.
+      - [x] Store `Segment` in DB with `name`, `rules` (as JSON), and `audienceUserIds` (array of strings).
+    - [x] Output: Saved segment object.
+  - [x] API Endpoint: `GET /api/segments` (list all segments)
+    - [x] Logic: Fetch all segments from DB, order by `createdAt` descending.
+    - [x] Output: Array of segment objects.
+  - [x] API Endpoint: `GET /api/segments/:id` (get specific segment details)
+    - [x] Logic: Fetch segment by ID from DB. Validate ID format.
+    - [x] Output: Single segment object or 404 if not found.
 - [ ] **Campaign Creation & Delivery Logic:**
   - [ ] API Endpoint: `POST /api/campaigns`
     - Input: `name` (String), `messageTemplate` (String, e.g., "Hi {name}, ..."), `segmentId` (String UUID).

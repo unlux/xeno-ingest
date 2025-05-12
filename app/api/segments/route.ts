@@ -97,3 +97,29 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// --- API Route Handler for GET /api/segments ---
+export async function GET(request: NextRequest) {
+  try {
+    const segments = await prisma.segment.findMany({
+      orderBy: {
+        createdAt: "desc", // Optional: order by creation date
+      },
+      // Optionally, you might want to select specific fields or include related data
+      // select: { id: true, name: true, createdAt: true, audienceUserIds: true } // Example
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: segments,
+    });
+  } catch (error) {
+    console.error("Error fetching segments:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "An unexpected error occurred.";
+    return NextResponse.json(
+      { success: false, error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
