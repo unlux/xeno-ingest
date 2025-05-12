@@ -54,6 +54,9 @@
       ./package-lock.json; # <--- path to our package-lock.json file that contains the version of prisma-engines
   in {
     devShells.${system}.default = pkgs.mkShell {
+      buildInputs = with pkgs; [
+        openssl
+      ];
       env = prisma.env;
       # or, you can use `shellHook` instead of `env` to load the same environment variables.
       # shellHook = prisma.shellHook;
