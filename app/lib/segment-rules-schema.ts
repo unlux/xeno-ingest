@@ -73,3 +73,10 @@ const refinedConditionSchema = z.discriminatedUnion("field", [
 ]);
 // This requires defining stringOperators, numberOperators, dateOperators arrays.
 */
+
+export const createSegmentSchema = z.object({
+  name: z.string().min(3, "Segment name must be at least 3 characters long."),
+  rules: segmentRulesSchema, // Reusing the existing rules schema
+});
+
+export type CreateSegmentPayload = z.infer<typeof createSegmentSchema>;

@@ -57,21 +57,26 @@
   - [x] Ran `npx prisma migrate dev` successfully.
   - [x] Ran `npx prisma generate` successfully.
 - [ ] **Audience Segmentation & Preview:**
-  - [ ] API Endpoint: `POST /api/segments/preview`
-    - [ ] Define Zod schema for rule structure (`segmentRulesSchema`, `conditionGroupSchema`, `conditionSchema`).
-    - Input: `rules` (JSON object representing segment logic).
-    - Validation: Zod schema for rules structure.
-    - Logic:
-      - Parse `rules`.
-      - Construct Prisma query based on rules (query `User` and `Order` tables).
-      - Consider fields like `totalSpend`, `orderCount`, `lastOrderDate` (may need pre-calculation or on-the-fly calculation).
-    - Output: `{ "audienceSize": number, "sampleUserIds": ["id1", "id2", ...] }` (limit sample size).
+  - [x] API Endpoint: `POST /api/segments/preview`
+    - [x] Define Zod schema for rule structure (`segmentRulesSchema`, `conditionGroupSchema`, `conditionSchema`).
+    - [x] Input: `rules` (JSON object representing segment logic).
+    - [x] Validation: Zod schema for rules structure.
+    - [x] Logic: (Implementation Complete - Needs Testing & Potential Optimization)
+      - [x] Parse `rules`.
+      - [x] Fetch Users with Orders and Address (using Prisma-generated types).
+      - [x] Implement helper `calculateUserAggregates(user)` for `totalSpend`, `orderCount`, `lastOrderDate`.
+      - [x] Implement helper `evaluateCondition(user, aggregates, condition)` for individual rule conditions.
+      - [x] Implement helper `evaluateUserAgainstRuleGroups(user, aggregates, rules)` for OR/AND logic.
+      - [x] Iterate through users, apply rules, count matches, collect sample IDs.
+    - [x] Output: `{ "audienceSize": number, "sampleUserIds": ["id1", "id2", ...] }`.
   - [ ] API Endpoint: `POST /api/segments` (to create and save a segment for a campaign)
+    - [ ] Define Zod schema for input (`name`, `rules`).
     - Input: `name` (String), `rules` (JSON).
     - Validation: Zod schema for input.
     - Logic:
-      1.  Call segmentation logic (similar to preview) to get `audienceUserIds` and `audienceSize`.
-      2.  Store `Segment` in DB with `name`, `rules`, and `audienceUserIds`.
+      - Parse `rules`.
+      - Reuse segmentation logic from preview (`calculateUserAggregates`, `evaluateCondition`, `evaluateUserAgainstRuleGroups`) to get `audienceUserIds` and `audienceSize`.
+      - Store `Segment` in DB with `name`, `rules` (as JSON), and `audienceUserIds` (array of strings).
     - Output: Saved segment object.
   - [ ] API Endpoint: `GET /api/segments` (list all segments)
     - Output: Array of segment objects.
