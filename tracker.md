@@ -47,6 +47,8 @@
   - [x] Define `Campaign` model:
     - [x] Fields: `id` (UUID, PK), `name` (String), `messageTemplate` (String), `segmentId` (UUID, FK to Segment), `status` (Enum), `audienceSize`, `sentCount`, `failedCount`, `createdAt`, `updatedAt`.
     - [x] Relation: `Segment`, `CommunicationLog[]`.
+    - [x] Simplified `CampaignStatus` to `PROCESSING`, `COMPLETED`.
+    - [x] Removed `scheduledAt` field. Default status to `PROCESSING`.
     - [x] Added `@@index([segmentId])`, `@@index([status])`.
   - [x] Define `CommunicationLog` model:
     - [x] Fields: `id` (UUID, PK), `campaignId` (UUID, FK to Campaign), `customerId` (UUID, FK to User), `status` (Enum), `personalizedMessage`, `sentAt`, `vendorMessageId`, `deliveryReceiptStatus`, `createdAt`, `updatedAt`.
@@ -84,52 +86,26 @@
   - [x] API Endpoint: `GET /api/segments/:id` (get specific segment details)
     - [x] Logic: Fetch segment by ID from DB. Validate ID format.
     - [x] Output: Single segment object or 404 if not found.
-- [ ] **Campaign Creation & Delivery Logic:**
-  - [ ] API Endpoint: `POST /api/campaigns`
-    - Input: `name` (String), `messageTemplate` (String, e.g., "Hi {name}, ..."), `segmentId` (String UUID).
-    - Validation: Zod schema for input.
-    - Logic:
-      1.  Fetch `Segment` by `segmentId` (including `audienceUserIds`).
-      2.  Create `Campaign` record in DB (status: DRAFT or PROCESSING, `audienceSize` from segment).
-      3.  For each `customerId` in `segment.audienceUserIds`:
-          - Fetch customer details (e.g., name) for personalization.
-          - Construct `personalizedMessage`.
-          - Create `CommunicationLog` entry (status: PENDING, `campaignId`, `customerId`, `personalizedMessage`).
-          - Add a job to `deliveryQueue` with `{ communicationLogId: string, customerId: string, personalizedMessage: string }`.
-      4.  Update Campaign status (e.g., to SENDING).
-    - Output: Created campaign object.
-  - [ ] **Message Queue for Delivery (`deliveryQueue`):**
-    - [ ] Configure BullMQ for `deliveryQueue`.
-  - [ ] **Worker for `deliveryQueue`:**
-    - [ ] Process jobs from `deliveryQueue`.
-    - [ ] For each job:
-      - Call Dummy Vendor Email API (`/api/mock-vendor/send-email`) with `communicationLogId`, `customerId`, `personalizedMessage`.
-  - [ ] **Dummy Vendor Email API (Mock):**
-    - [ ] Create API endpoint: `POST /api/mock-vendor/send-email`
-      - Input: `{ communicationLogId: string, customerId: string, message: string }`.
-      - Logic:
-        - Simulate delay (e.g., 50-200ms).
-        - Simulate success/failure (90% SENT, 10% FAILED).
-        - Generate a `vendorMessageId`.
-      - Action: Asynchronously call own Delivery Receipt API (`/api/delivery-receipt`) with `communicationLogId`, `vendorMessageId`, simulated `status`, `timestamp`.
-    - Output: `{ "status": "QUEUED_BY_VENDOR", "vendorMessageId": "some-uuid" }`.
-  - [ ] **Delivery Receipt API:**
-    - [ ] API Endpoint: `POST /api/delivery-receipt`
-      - Input: `{ communicationLogId: string, vendorMessageId: string, status: "SENT" | "FAILED", timestamp: string }`.
-      - Validation: Zod schema for input.
-      - Logic:
-        1.  Find `CommunicationLog` by `communicationLogId`.
-        2.  Update its `status`, `vendorMessageId`, `deliveryReceiptStatus`, `sentAt`.
-        3.  Increment `sentCount` or `failedCount` on the parent `Campaign` record.
-        4.  (Brownie Points: If high volume, add to a `receiptProcessingQueue` and update DB in batches via a worker).
-      - Output: `{ "success": true }`.
-- [ ] **Campaign History/Stats:**
-  - [ ] API Endpoint: `GET /api/campaigns` (or `/api/campaigns/history`)
-    - Logic: Fetch campaigns, include `segment` name, `audienceSize`, `sentCount`, `failedCount`. Sort by `createdAt` descending.
-    - Output: List of campaign objects with stats.
-  - [ ] API Endpoint: `GET /api/campaigns/:id`
-    - Logic: Fetch specific campaign, include its `CommunicationLog` entries (or a summary).
-    - Output: Detailed campaign object.
+- [x] **Campaign Creation & Scheduling:**
+  - [x] API Endpoint: `POST /api/campaigns` (Handles combined Segment & Campaign creation)
+    - [x] Define Zod schema for input (`campaignName`, `message`, `segmentName`, `segmentRules`).
+    - [x] Input: `campaignName` (String), `message` (String), `segmentName` (String), `segmentRules` (JSON).
+    - [x] Validation: Zod schema for input.
+    - [x] Logic:
+      - [x] Create `Segment` record in DB using `segmentName` and `segmentRules` (calculating audience).
+      - [x] Create `Campaign` record in DB using the new segment's ID, with `status = PROCESSING`.
+      - [x] Add a job to the BullMQ queue for processing. (Placeholder added, console log active)
+    - [x] Output: Created segment and campaign objects.
+  - [x] API Endpoint: `GET /api/campaigns` (list all campaigns)
+    - [x] Logic: Fetch all campaigns, order by `createdAt` desc, include segment name.
+    - [x] Output: Array of campaign objects with `segmentName`.
+  - [x] API Endpoint: `GET /api/campaigns/:id` (get specific campaign details)
+    - [x] Logic: Fetch campaign by ID, include detailed segment info (name, id, rules, audienceUserIds).
+    - [x] Output: Single campaign object with nested segment details.
+  - [ ] API Endpoint: `DELETE /api/campaigns/:id` (cancel campaign - only if `PROCESSING` and not yet fully sent, or mark as `CANCELLED` if new status is added)
+    - Output: Success message.
+- [ ] **API Documentation:**
+  - [ ] Document request/response payloads for all core API endpoints (User, Order, Segment, Campaign).
 
 ## Phase 3: Authentication & AI Integration
 
