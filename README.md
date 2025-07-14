@@ -428,4 +428,3 @@ This document provides details for all available API endpoints.
 
 ---
 
-This documentation should cover all the API endpoints we've built so far. Let me know if you need any adjustments or further details!
